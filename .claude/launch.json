@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "seo-math-worksheets",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-m", "uvicorn", "app.main:app", "--port", "8020"],
+      "cwd": "seo_math_worksheets",
+      "port": 8020
+    }
+  ]
+}

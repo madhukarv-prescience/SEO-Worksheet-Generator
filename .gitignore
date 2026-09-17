@@ -1,0 +1,29 @@
+# ── SECRETS — never commit these ────────────────────────────────────
+# seo_math_worksheets/.env holds the Groq/Anthropic/OpenAI/Canva keys.
+# This line is the only thing standing between a live key and a public
+# repo. Do not remove it.
+.env
+*.env
+!.env.example
+
+# ── Python ───────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# ── macOS ────────────────────────────────────────────────────────────
+.DS_Store
+
+# ── Fetched source PDFs ──────────────────────────────────────────────
+# Reproducible with `python3 run.py fetch <target>` and large (100MB+).
+# Every developer fetches their own copy rather than pulling it via git.
+k5-worksheet-fetcher/data/output/
+k5-worksheet-fetcher/logs/
+
+# ── Runtime data for the tool ────────────────────────────────────────
+# Uploaded PDFs, generated worksheets, exported PDFs, the SQLite database.
+# Per-developer/per-deployment state, not something to share through git —
+# committing a live .db here would just produce merge conflicts on a
+# binary file. Re-created automatically on first run.
+seo_math_worksheets/data/

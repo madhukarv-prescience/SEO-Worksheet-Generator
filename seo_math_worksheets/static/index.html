@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bhanzu SEO Math Worksheets</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <img src="/static/bhanzu_logo.png" alt="Bhanzu">
+    <span class="divider"></span>
+    <span class="product">SEO Math Worksheets</span>
+  </div>
+  <nav class="tabs">
+    <button class="tab" data-view="repository">
+      Repository <span class="tabcount" id="repoCount"></span>
+    </button>
+    <button class="tab" data-view="approved">
+      Approved <span class="tabcount" id="approvedCount"></span>
+    </button>
+    <button class="tab" data-view="setup">Setup</button>
+  </nav>
+</header>
+
+<nav class="steps" id="steps">
+  <button class="step on" data-view="library">
+    <span class="stepnum">1</span>
+    <span class="steptext"><strong>Library</strong><em>Bring worksheets in</em></span>
+  </button>
+  <span class="steparrow">→</span>
+  <button class="step" data-view="create">
+    <span class="stepnum">2</span>
+    <span class="steptext"><strong>Create</strong><em>Generate new versions</em></span>
+  </button>
+  <span class="steparrow">→</span>
+  <button class="step" data-view="review">
+    <span class="stepnum">3</span>
+    <span class="steptext"><strong>Review &amp; approve</strong><em>Check, edit, print</em></span>
+  </button>
+</nav>
+
+<main>
+
+  <!-- ── LIBRARY ─────────────────────────────────────────── -->
+  <section id="view-library" class="view on">
+    <div class="viewhead withaction">
+      <div>
+        <h1>Worksheet library</h1>
+        <p class="lead">Bring in the source worksheets you want to build from. Three ways in — all end up in the same library.</p>
+      </div>
+      <button class="btn primary nextstep" id="toCreate" hidden>
+        Next: create worksheets →
+      </button>
+    </div>
+
+    <div class="cards">
+      <div class="card">
+        <div class="cardtag">Already fetched</div>
+        <h3>From our collections</h3>
+        <p>Choose how many to add or take back out.</p>
+        <div id="collections" class="collections"><p class="muted">Loading…</p></div>
+      </div>
+
+      <div class="card">
+        <div class="cardtag">Link</div>
+        <h3>From Google Drive</h3>
+        <p>Paste a share link to a single PDF. It must be shared as "Anyone with the link".</p>
+        <form id="driveForm" class="stack">
+          <input type="url" name="link" placeholder="https://drive.google.com/file/d/…" required>
+          <button class="btn primary" type="submit">Add from Drive</button>
+        </form>
+      </div>
+
+      <div class="card">
+        <div class="cardtag">Upload</div>
+        <h3>From your computer</h3>
+        <p>Choose a PDF from the system.</p>
+        <form id="uploadForm" class="stack">
+          <input type="file" name="file" accept="application/pdf" required>
+          <button class="btn primary" type="submit">Upload PDF</button>
+        </form>
+      </div>
+    </div>
+
+    <h2 class="sectiontitle">Worksheet templates <span id="templateCount" class="count"></span></h2>
+    <div class="card templatecard">
+      <p class="lead small">The <strong>look</strong> a finished worksheet should follow — separate from where its questions come from. Tag each one with the grade it suits, then pick it when you create.</p>
+      <form id="templateForm" class="templateform">
+        <input type="file" name="file" accept=".pdf,.docx" required>
+        <select name="grade" id="templateGrade"></select>
+        <button class="btn primary" type="submit">Add template</button>
+      </form>
+      <div id="templateList" class="list tight"></div>
+    </div>
+
+    <h2 class="sectiontitle">In your library <span id="sourceCount" class="count"></span></h2>
+    <div id="sourceList" class="list"><p class="muted">Nothing added yet.</p></div>
+  </section>
+
+  <!-- ── CREATE ──────────────────────────────────────────── -->
+  <section id="view-create" class="view">
+    <div class="viewhead">
+      <h1>Create worksheets</h1>
+      <p class="lead">Pick a source, choose how it should change, and how many versions you want.</p>
+    </div>
+
+    <form id="createForm" class="createform">
+      <div class="field">
+        <label>1 · Source worksheet</label>
+        <select name="source_id" id="sourceSelect" required></select>
+        <label class="allsources">
+          <input type="checkbox" id="allSources">
+          <span>Use <strong>every</strong> worksheet in the library <span class="opt" id="allSourcesCount"></span></span>
+        </label>
+        <p id="sourceWarning" class="warnline" hidden>
+          ⚠ This looks like an activity sheet (e.g. colour-by-number), not a set of
+          questions — there may be nothing here to build a maths question from.
+        </p>
+        <label class="allsources" id="includeFlaggedRow" hidden>
+          <input type="checkbox" id="includeFlagged">
+          <span>Include activity sheets anyway <span class="opt">they usually don't generate well</span></span>
+        </label>
+        <p class="hint">The new worksheets keep the source's structure, and change everything else.</p>
+      </div>
+
+      <div class="field">
+        <label>2 · Template <span class="opt">optional</span></label>
+        <select name="template_id" id="templateSelect"></select>
+      </div>
+
+      <div class="field">
+        <label>3 · How should they be built? <span class="opt">pick one or both</span></label>
+        <div id="modeOptions" class="modes"></div>
+      </div>
+
+      <div class="fieldrow">
+        <div class="field">
+          <label>4 · Grade</label>
+          <select name="grade" id="gradeSelect"></select>
+        </div>
+        <div class="field">
+          <label>5 · Difficulty</label>
+          <select name="difficulty" id="difficultySelect"></select>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>6 · What should change?</label>
+        <div id="varyOptions" class="chips"></div>
+        <p class="hint">Changing one thing at a time is deliberate — it's what makes a set of worksheets teach, rather than just look different.</p>
+      </div>
+
+      <div class="fieldrow">
+        <div class="field">
+          <label>7 · How many versions</label>
+          <input type="number" name="variant_count" min="1" max="10" value="3">
+          <p class="hint">Each one is a different worksheet at the same level.</p>
+        </div>
+        <div class="field">
+          <label>Questions per worksheet</label>
+          <input type="number" name="question_count" min="4" max="30" placeholder="Grade default">
+          <p class="hint">Leave blank to use the grade's usual length.</p>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>8 · Closing message <span class="opt">optional</span></label>
+        <textarea name="closing_message" rows="2"
+          placeholder="e.g. Brilliant work! Next class we'll turn these into times tables — see you there."></textarea>
+        <div class="suggestrow">
+          <input type="text" id="closingTopic" placeholder="…or type the topic and let it write one">
+          <select id="closingGoal" title="What should it invite them to do?"></select>
+          <button type="button" class="btn sm" id="closingSuggest">Suggest</button>
+        </div>
+        <p class="hint">Printed in a highlighted box at the end of every worksheet — it's what invites the child back next session.</p>
+      </div>
+
+      <div class="field">
+        <label>9 · Anything else <span class="opt">optional</span></label>
+        <textarea name="extra_instructions" rows="2"
+          placeholder="e.g. use sports and music contexts; avoid food entirely"></textarea>
+      </div>
+
+      <div class="formfoot">
+        <button class="btn primary big" type="submit">Create worksheets</button>
+        <button type="button" class="btn nextstep" data-goto="review">
+          Skip to review &amp; approve →
+        </button>
+      </div>
+      <p id="createStatus" class="status"></p>
+      <button type="button" class="btn primary nextstep" id="createToReview" hidden>
+        Next: review &amp; approve →
+      </button>
+      <div id="jobPanel" class="jobpanel" hidden>
+        <div class="jobhead">
+          <strong id="jobLabel"></strong>
+          <span id="jobCount" class="muted"></span>
+        </div>
+        <div class="jobbar"><div id="jobFill" class="jobfill"></div></div>
+        <div id="jobCurrent" class="muted small"></div>
+        <ul id="jobFailed" class="vissues"></ul>
+        <button type="button" class="btn primary nextstep" id="jobToReview" hidden>
+          Next: review &amp; approve →
+        </button>
+      </div>
+    </form>
+  </section>
+
+  <!-- ── REVIEW ──────────────────────────────────────────── -->
+  <section id="view-review" class="view">
+    <div class="viewhead">
+      <h1>Review &amp; approve</h1>
+      <p class="lead">Check each worksheet. Ask for changes in plain English. Approve the ones you want.</p>
+    </div>
+    <div id="batchList" class="list"><p class="muted">Nothing created yet.</p></div>
+    <div id="batchDetail"></div>
+    <div class="roundagain">
+      <button class="btn primary nextstep" data-goto="create">
+        Create more worksheets →
+      </button>
+      <button class="btn nextstep" data-goto="library">
+        Back to the library
+      </button>
+    </div>
+  </section>
+
+  <!-- ── REPOSITORY ──────────────────────────────────────── -->
+  <section id="view-repository" class="view">
+    <div class="viewhead">
+      <h1>Repository</h1>
+      <p class="lead">Every source worksheet brought in, and what has been built from each. This is the standing record — nothing here disappears when a run finishes.</p>
+    </div>
+    <div id="repoStats" class="stats"></div>
+    <div id="repoList" class="list"></div>
+  </section>
+
+  <!-- ── SETUP ───────────────────────────────────────────── -->
+  <section id="view-setup" class="view">
+    <div class="viewhead">
+      <h1>Setup</h1>
+      <p class="lead">Which providers are connected, and what the validation gate checks before a worksheet reaches review. Keys are never entered here — paste them into <code>seo_math_worksheets/.env</code> and restart the server.</p>
+    </div>
+    <div id="setupContent"></div>
+  </section>
+
+  <!-- ── APPROVED ────────────────────────────────────────── -->
+  <section id="view-approved" class="view">
+    <div class="viewhead">
+      <h1>Approved worksheets</h1>
+      <p class="lead">Everything signed off and ready to publish.</p>
+    </div>
+    <div id="approvedStats" class="stats"></div>
+    <div id="approvedList" class="list"></div>
+  </section>
+
+</main>
+
+<!-- change request dialog -->
+<div id="reviseModal" class="modal" hidden>
+  <div class="modalbox">
+    <h3 id="reviseTitle">Ask for a change</h3>
+    <div class="scopepick">
+      <label><input type="radio" name="scope" value="both" checked> Questions and pictures</label>
+      <label><input type="radio" name="scope" value="images"> Pictures only <span class="opt">keeps every question exactly as it is</span></label>
+    </div>
+    <textarea id="reviseText" rows="4"
+      placeholder="e.g. the second question is too hard for this grade — make it one step, and use a number line instead of counters"></textarea>
+    <div class="modalfoot">
+      <button class="btn" id="reviseCancel">Cancel</button>
+      <button class="btn primary" id="reviseGo">Apply change</button>
+    </div>
+    <p id="reviseStatus" class="status"></p>
+  </div>
+</div>
+
+<div id="editModal" class="modal" hidden>
+  <div class="modalbox wide">
+    <h3>Edit questions</h3>
+    <p class="hint">Change the wording or the answer. Pictures stay as they are.</p>
+    <div id="editList" class="editlist"></div>
+    <div class="modalfoot">
+      <button class="btn" id="editCancel">Cancel</button>
+      <button class="btn primary" id="editSave">Save changes</button>
+    </div>
+    <p id="editStatus" class="status"></p>
+  </div>
+</div>
+
+<div id="toast" class="toast" hidden></div>
+
+<script src="/static/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+# Bhanzu SEO Math Worksheets — dependencies
+#
+# Install with:
+#   pip3 install -r requirements.txt
+#
+# If you see "externally-managed-environment", use a virtual environment:
+#   python3 -m venv .venv && source .venv/bin/activate
+#   pip3 install -r requirements.txt
+
+fastapi==0.141.1
+uvicorn==0.49.0
+python-dotenv==1.2.2
+httpx==0.28.1
+jinja2==3.1.6
+pymupdf==1.28.2
+matplotlib==3.11.1
+pillow==12.3.0

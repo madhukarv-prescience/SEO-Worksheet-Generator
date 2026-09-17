@@ -1,0 +1,2 @@
+# No external Python packages required — stdlib only.
+# Requires `curl` on PATH (preinstalled on macOS/Linux).
