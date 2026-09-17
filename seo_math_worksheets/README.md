@@ -34,7 +34,7 @@ app to confirm what's active without opening the file again.
 | `GROQ_API_KEY` | console.groq.com/keys | Free tier. Fastest. Currently in use as the placeholder. |
 | `ANTHROPIC_API_KEY` | console.anthropic.com | Paid. |
 | `OPENAI_API_KEY` | platform.openai.com/api-keys | Paid. Also unlocks decorative image generation. |
-| `CANVA_CLIENT_ID` / `_SECRET` / `_BRAND_TEMPLATE_ID` | canva.com/developers | Optional image fallback — see below. |
+| `CANVA_CLIENT_ID` / `_SECRET` / `_BRAND_TEMPLATE_ID` | canva.com/developers | Optional image fallback — needs **Canva Enterprise**, see below. |
 
 If more than one key is set, the order is Groq → Anthropic → OpenAI.
 Force a specific one with `LLM_PROVIDER=openai` (or `groq`/`anthropic`)
@@ -104,13 +104,16 @@ An OpenAI key additionally enables `generate_realistic_image()` for
 decorative/photo-real artwork. It is never used where the maths has to
 be right.
 
-**Canva** is optional and not required. Its API arranges images you
-already own into a template you designed yourself — it does not draw
-original artwork from a prompt. Wiring is in place end to end
-(`app/providers/canva.py`); the one function still to write once real
-credentials exist is `_canva_asset()` — everything around it (when to
-call it, what to do if it fails) already works. Without it, a picture
-that fails validation is simply redrawn.
+**Canva** is optional and not required — and has a real catch: its
+Autofill API needs a **Canva Enterprise** plan (Canva's own requirement,
+stated in their docs — not something this app can work around). It's
+also OAuth, not a static key: a real person clicks "Allow" once from the
+**Setup** tab, after `CANVA_CLIENT_ID`/`CANVA_CLIENT_SECRET`/
+`CANVA_BRAND_TEMPLATE_ID` are in `.env`. Full flow is implemented —
+`app/providers/canva.py` — including the PKCE handshake, encrypted token
+storage with auto-refresh, and the real async upload → autofill → export
+job sequence. Without a completed connection, a picture that fails
+validation is simply redrawn for free.
 
 ## What makes the worksheets different from each other
 
@@ -148,7 +151,7 @@ app/
   providers/
     llm.py        Groq / Anthropic / OpenAI / sample, one interface
     images.py     deterministic diagram drawing + OpenAI decorative art
-    canva.py      image-only fallback (Autofill call still a stub)
+    canva.py      image-only fallback — real OAuth+PKCE, needs Canva Enterprise
   export/
     worksheet_html.py   branded printable page + real PDF via Chrome
 static/           the interface (plain JS, no build step)

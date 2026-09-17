@@ -144,19 +144,40 @@ worksheets too) rather than either silently failing or corrupting data.
 
 | To add | Touch this file | Nothing else changes |
 |---|---|---|
-| A new key (Groq/Anthropic/OpenAI/Canva) | `seo_math_worksheets/.env` | Auto-detected on restart |
+| A new key (Groq/Anthropic/OpenAI) | `seo_math_worksheets/.env` | Auto-detected on restart |
 | A different text provider | `app/providers/llm.py` — one `_yourprovider()` function + one line in `_PROVIDERS` | Generation, validation, everything above stays the same |
-| Canva's real Autofill call | `app/providers/canva.py::_canva_asset()` | The gate, the fallback order, and the UI already call this correctly |
+| Canva | `.env` (3 values) **plus** clicking "Connect Canva" in the Setup tab | Needs a **Canva Enterprise** plan — see §5. This is OAuth (a person approves it once), not a key you just paste in. |
 | A new diagram kind | `app/providers/images.py` — one render function + one line in `_RENDERERS`, plus telling the model about it in `DIAGRAM_SPEC_INSTRUCTIONS` | Validation's answer-reveal check and the sense-checker's picture description both generalise automatically |
 | A new source website | A new module beside `k5-worksheet-fetcher/`, plus a new branch in `app/ingest.py`'s three-route dispatch | The generation and validation pipeline never sees where a PDF came from |
 
 ---
 
-## 5. What is deliberately not built yet
+## 5. Canva — the important caveat
 
-- **Canva's Autofill call** — stubbed on purpose. Writing an untested
-  integration against an API nobody here can exercise would look
-  finished and fail the first time real credentials arrived.
+Canva's Autofill API (the piece that would place a picture into a
+branded template) **requires a Canva Enterprise plan**. This is Canva's
+own restriction, stated in their documentation, not a limitation of
+this codebase — a Free, Pro, or Teams Canva plan cannot use it at all,
+regardless of what credentials are configured.
+
+The connection is also **OAuth 2.0 with PKCE**, not a static API key: a
+real person with a Canva account logs into Canva's Developer Portal
+(MFA required), creates an integration, and then approves the
+connection once from the app's Setup tab. `app/providers/canva.py`
+implements the full flow — the authorization redirect, the callback,
+encrypted token storage with automatic refresh, and the real
+upload → autofill → export job sequence (each of those three steps is
+an asynchronous job that must be polled, not a single request/response).
+
+One implementation detail is flagged in the code as unconfirmed against
+Canva's live API: the exact shape of the `Asset-Upload-Metadata` header
+sent when uploading an image. It's implemented against the best
+available documentation but hasn't been exercised against a real
+connection — see the comment at that line in `canva.py` if an upload
+ever fails with a 400.
+
+## 6. What is deliberately not built yet
+
 - **Publishing an approved worksheet to the live site** — the pipeline
   stops at "approved and downloadable"; where it goes after that is a
   team decision, not a technical one.

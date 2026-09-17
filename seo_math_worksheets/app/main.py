@@ -16,7 +16,7 @@ from pathlib import Path
 
 from fastapi import BackgroundTasks, FastAPI, File, Form, HTTPException, UploadFile
 from fastapi import Request
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 from app import config, generate, ingest, jobs
@@ -574,13 +574,51 @@ def api_setup():
     status = config.key_status()
     return {
         **status,
-        "canva_stub_note": (
-            "Canva's Autofill call itself (app/providers/canva.py::_canva_asset) "
-            "is intentionally unimplemented until real credentials exist to "
-            "test against — everything around it (when to call it, what to do "
-            "if it fails) is already wired up."
+        "canva": {**status["canva"], **canva.availability(),
+                   "connection": canva.connection_status()},
+        "canva_note": (
+            "Canva's Autofill API requires a Canva ENTERPRISE plan — this is "
+            "a hard requirement from Canva, not something this app can work "
+            "around. Connecting is a real person clicking 'Allow' once "
+            "(OAuth), not just pasting a key — use 'Connect Canva' below "
+            "once CANVA_CLIENT_ID/SECRET/BRAND_TEMPLATE_ID are in .env."
         ),
     }
+
+
+@app.get("/api/canva/connect")
+def api_canva_connect():
+    """Redirects the browser to Canva to approve the connection. Visit
+    this URL directly (the Setup tab links to it) — it is meant to be
+    clicked by a person, not called from JavaScript."""
+    try:
+        url = canva.start_authorization()
+    except RuntimeError as e:
+        raise HTTPException(400, str(e))
+    return RedirectResponse(url)
+
+
+@app.get("/api/canva/callback")
+def api_canva_callback(code: str = "", state: str = "", error: str = ""):
+    """Canva redirects here after the person approves (or declines)."""
+    if error:
+        return HTMLResponse(
+            f"<p>Canva connection was not completed: {error}. "
+            f"<a href='/'>Back to the app</a></p>", status_code=400)
+    try:
+        canva.complete_authorization(code, state)
+    except RuntimeError as e:
+        return HTMLResponse(f"<p>{e} <a href='/'>Back to the app</a></p>", status_code=400)
+    return HTMLResponse(
+        "<p>Canva connected. You can close this tab and go back to the app.</p>"
+        "<script>setTimeout(()=>{ if (window.opener) window.close(); }, 1500)</script>"
+    )
+
+
+@app.post("/api/canva/disconnect")
+def api_canva_disconnect():
+    canva.disconnect()
+    return {"ok": True}
 
 
 # ── Activity ───────────────────────────────────────────────────────

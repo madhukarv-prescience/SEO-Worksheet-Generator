@@ -53,6 +53,19 @@ OPENAI_IMAGE_MODEL = os.getenv("OPENAI_IMAGE_MODEL", "gpt-image-1")
 CANVA_CLIENT_ID = os.getenv("CANVA_CLIENT_ID", "")
 CANVA_CLIENT_SECRET = os.getenv("CANVA_CLIENT_SECRET", "")
 CANVA_BRAND_TEMPLATE_ID = os.getenv("CANVA_BRAND_TEMPLATE_ID", "")
+# Where Canva redirects back to after someone approves the connection.
+# Must be registered EXACTLY (including scheme and trailing slash rules)
+# in the integration's settings in the Canva Developer Portal.
+CANVA_REDIRECT_URI = os.getenv("CANVA_REDIRECT_URI", "http://127.0.0.1:8020/api/canva/callback")
+
+# Encrypts the Canva refresh token at rest in the database (it is a live
+# credential, not a static key — see providers/canva.py). Generate one
+# with: python3 -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+# If unset, a key is generated at startup and printed once — fine for a
+# single local run, but it means tokens stored before a restart without
+# this set become unreadable after restart. Set it explicitly for any
+# shared/deployed instance.
+APP_SECRET_KEY = os.getenv("APP_SECRET_KEY", "")
 
 # Explicit override; "auto" means pick whichever key exists.
 LLM_PROVIDER = os.getenv("LLM_PROVIDER", "auto").lower()

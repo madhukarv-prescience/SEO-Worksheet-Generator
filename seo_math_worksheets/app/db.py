@@ -81,6 +81,28 @@ CREATE TABLE IF NOT EXISTS revisions (
     FOREIGN KEY (worksheet_id) REFERENCES worksheets(id)
 );
 
+CREATE TABLE IF NOT EXISTS canva_connection (
+    -- Single row (id always 'default'). Canva's Autofill API needs a real
+    -- person to authorize once via OAuth (Authorization Code + PKCE) --
+    -- this is NOT a static API key, it's a live connection that can expire
+    -- or be revoked, hence a table rather than a .env value.
+    id             TEXT PRIMARY KEY DEFAULT 'default',
+    access_token   TEXT NOT NULL,   -- encrypted at rest, see providers/canva.py
+    refresh_token  TEXT NOT NULL,   -- encrypted at rest
+    expires_at     TEXT NOT NULL,   -- ISO timestamp
+    connected_by   TEXT,            -- whatever Canva's /users/me returns, if available
+    connected_at   TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS oauth_state (
+    -- Short-lived PKCE state for the in-flight authorization request.
+    -- Deleted once the callback completes; a leftover row just means an
+    -- attempt was abandoned, not a security issue since it's single-use.
+    state          TEXT PRIMARY KEY,
+    code_verifier  TEXT NOT NULL,
+    created_at     TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS activity (
     id         TEXT PRIMARY KEY,
     action     TEXT NOT NULL,

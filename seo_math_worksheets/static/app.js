@@ -267,23 +267,37 @@ async function loadSetup() {
       tp.openai, tp.openai.configured ? `Model: <code>${esc(tp.openai.model)}</code>` : '');
 
   const canva = s.canva;
+  const canvaConnected = canva.connection?.connected;
+  const canvaStatusPill = canvaConnected
+    ? '<span class="pill ok">connected</span>'
+    : canva.configured
+      ? '<span class="pill warn">keys set, not connected</span>'
+      : '<span class="pill warn">not set</span>';
   const canvaHTML = `
-    <div class="setupcard ${canva.configured ? 'on' : ''}">
+    <div class="setupcard ${canvaConnected ? 'on' : ''}">
       <div class="setupcardhead">
-        <span class="setupdot ${canva.configured ? 'on' : ''}"></span>
+        <span class="setupdot ${canvaConnected ? 'on' : ''}"></span>
         <strong>Canva (image fallback only)</strong>
-        ${canva.configured ? '<span class="pill ok">configured</span>' : '<span class="pill warn">not set</span>'}
+        ${canvaStatusPill}
       </div>
       <div class="setupline">
         Client ID: ${canva.client_id_set ? '✓ set' : '— not set'} ·
         Client secret: ${canva.client_secret_set ? '✓ set' : '— not set'} ·
         Brand template: ${canva.brand_template_set ? '✓ set' : '— not set'}
       </div>
-      <div class="setupline">${esc(s.canva_stub_note)}</div>
-      <div class="setupline">Docs: <a href="https://www.canva.com/developers/" target="_blank" rel="noopener">canva.com/developers</a></div>
+      <div class="setupline canvawarn">⚠ Requires a <strong>Canva Enterprise</strong> plan for the Autofill API — this is Canva's own requirement, not something this app can work around.</div>
+      <div class="setupline">${esc(s.canva_note)}</div>
+      <div class="setupactions">
+        ${canva.configured
+          ? (canvaConnected
+              ? '<button class="btn sm" id="canvaDisconnect">Disconnect</button>'
+              : '<a class="btn sm primary" href="/api/canva/connect" target="_blank" rel="noopener">Connect Canva →</a>')
+          : ''}
+        <a class="btn sm" href="https://www.canva.com/developers/" target="_blank" rel="noopener">canva.com/developers</a>
+      </div>
     </div>`;
 
-  $('#setupContent').innerHTML = `
+  const html = `
     <h2 class="sectiontitle">Question writing — first key found wins</h2>
     <p class="hint" style="margin-bottom:14px;">
       Order: Groq → Anthropic → OpenAI. If more than one is set, add
@@ -318,6 +332,15 @@ async function loadSetup() {
       <div class="setupline">Result is one of four verdicts shown on every worksheet card in Review: <strong>passed</strong>, <strong>images need redrawing</strong> (fixed automatically, questions untouched), <strong>needs another pass</strong>, or <strong>could not finish checking</strong> — the last is never treated as a silent pass.</div>
     </div>
   `;
+  $('#setupContent').innerHTML = html;
+
+  const dc = $('#canvaDisconnect');
+  if (dc) dc.addEventListener('click', async () => {
+    if (!confirm('Disconnect Canva? You can reconnect any time from here.')) return;
+    await api('/api/canva/disconnect', { method: 'POST' });
+    toast('Canva disconnected');
+    loadSetup();
+  });
 }
 
 /* ── templates ───────────────────────────────────────────── */
