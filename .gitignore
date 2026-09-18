@@ -6,6 +6,13 @@
 *.env
 !.env.example
 
+# Google service account key for the shared Drive folder integration.
+# This is a real, standing credential (not a short-lived token) — anyone
+# who has this file can act as the service account until the key is
+# revoked in Google Cloud Console. Never commit it.
+service_account.json
+*.service-account.json
+
 # ── Python ───────────────────────────────────────────────────────────
 __pycache__/
 *.py[cod]

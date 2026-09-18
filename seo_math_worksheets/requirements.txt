@@ -16,3 +16,5 @@ pymupdf==1.28.2
 matplotlib==3.11.1
 pillow==12.3.0
 cryptography==50.0.0
+google-api-python-client==2.200.0
+google-auth==2.58.0

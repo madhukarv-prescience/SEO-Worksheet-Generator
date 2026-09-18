@@ -193,13 +193,18 @@ async function loadRepository() {
 /* ── approved ────────────────────────────────────────────── */
 async function loadApproved() {
   const { items, total } = await api('/api/approved');
+  const s = await api('/api/setup');
+  state.driveConfigured = s.drive;
 
   const grades = {};
   items.forEach(i => (grades[i.grade] = (grades[i.grade] || 0) + 1));
   $('#approvedStats').innerHTML =
     stat('approved worksheets', total, true) +
     Object.entries(grades).sort((a, b) => a[0] - b[0])
-      .map(([g, n]) => stat(state.gradeLabels[g] || ('Grade ' + g), n)).join('');
+      .map(([g, n]) => stat(state.gradeLabels[g] || ('Grade ' + g), n)).join('') +
+    (total ? `<button class="btn primary" id="sendAllDrive" ${state.driveConfigured ? '' :
+      'disabled title="Set up a shared Drive folder first — see the README"'}>
+      Send all approved to Drive →</button>` : '');
 
   $('#approvedList').innerHTML = items.length
     ? items.map(i => `
@@ -212,6 +217,9 @@ async function loadApproved() {
           </div>
           <button class="btn sm" data-appview="${i.id}">Preview</button>
           <button class="btn sm" data-appdl="${i.id}">Download PDF</button>
+          <button class="btn sm" data-appdrive="${i.id}"
+                  ${state.driveConfigured ? '' : 'disabled title="Set up a shared Drive folder first — see the README"'}>
+            Send to Drive</button>
         </div>`).join('')
     : '<p class="muted">Nothing approved yet. Approve worksheets in review and they collect here.</p>';
 
@@ -233,6 +241,35 @@ async function loadApproved() {
     } catch (e) { toast(e.message); }
     b.disabled = false; b.textContent = 'Download PDF';
   }));
+
+  $$('#approvedList [data-appdrive]').forEach(b => b.addEventListener('click', async () => {
+    b.disabled = true; b.textContent = 'Sending…';
+    try {
+      await api(`/api/worksheets/${b.dataset.appdrive}/send-to-drive`, { method: 'POST' });
+      toast('Sent to the shared Drive folder');
+      b.textContent = '✓ Sent';
+    } catch (e) {
+      toast(e.message, 5000);
+      b.disabled = false; b.textContent = 'Send to Drive';
+    }
+  }));
+
+  const sendAll = $('#sendAllDrive');
+  if (sendAll) sendAll.addEventListener('click', async () => {
+    if (!confirm(`Send all ${total} approved worksheet(s) to the shared Drive folder?`)) return;
+    sendAll.disabled = true;
+    sendAll.innerHTML = '<span class="spinner"></span>Sending…';
+    try {
+      const r = await api('/api/approved/send-all-to-drive', { method: 'POST' });
+      toast(r.failed.length
+        ? `${r.sent} sent, ${r.failed.length} failed`
+        : `${r.sent} worksheet(s) sent to Drive`);
+    } catch (e) {
+      toast(e.message, 5000);
+    }
+    sendAll.disabled = false;
+    sendAll.textContent = 'Send all approved to Drive →';
+  });
 
   $('#approvedCount').textContent = total || '';
 }
@@ -320,6 +357,16 @@ async function loadSetup() {
         <div class="setupline">Never used where the maths must be exact — only for scene-setting artwork.</div>
       </div>
       ${canvaHTML}
+    </div>
+
+    <h2 class="sectiontitle">Shared team output</h2>
+    <div class="setupcard ${s.drive ? 'on' : ''}">
+      <div class="setupcardhead">
+        <span class="setupdot ${s.drive ? 'on' : ''}"></span>
+        <strong>Shared Drive folder</strong>
+        ${s.drive ? '<span class="pill ok">configured</span>' : '<span class="pill warn">not set up</span>'}
+      </div>
+      <div class="setupline">Where "Send to Drive" on the Approved tab uploads finished worksheets — organised into a subfolder per source category, so teammates working on different collections don't collide. Independent of any AI provider; see the README's "Shared Drive folder" section to set one up.</div>
     </div>
 
     <h2 class="sectiontitle">The validation gate</h2>

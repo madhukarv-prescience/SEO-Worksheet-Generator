@@ -152,6 +152,7 @@ app/
     llm.py        Groq / Anthropic / OpenAI / sample, one interface
     images.py     deterministic diagram drawing + OpenAI decorative art
     canva.py      image-only fallback — real OAuth+PKCE, needs Canva Enterprise
+    drive.py      pushes approved worksheets to a shared team Drive folder
   export/
     worksheet_html.py   branded printable page + real PDF via Chrome
 static/           the interface (plain JS, no build step)

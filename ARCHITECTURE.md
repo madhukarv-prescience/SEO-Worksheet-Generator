@@ -177,7 +177,29 @@ prose documentation — so this is believed correct, though it still has
 never been exercised against a real, live connection (that needs an
 actual Canva Enterprise account to test against).
 
-## 6. What is deliberately not built yet
+## 6. Team deployment — independent copies, one shared output
+
+The tool has no shared database or central server by design. Each
+teammate runs their own fully independent instance — their own SQLite
+database, their own library, their own approvals — so nobody's work
+depends on anyone else's machine being on.
+
+The one meeting point is a **shared Google Drive folder**
+(`app/providers/drive.py`). Approving a worksheet and clicking "Send to
+Drive" uploads it there, organised into a subfolder named after its
+source category (e.g. "Kindergarten Simple Math", "Grade 1 Math") — so
+several people each working through a different K5 category converge on
+one folder without their output colliding.
+
+This uses a Google **service account**, not OAuth. Unlike Canva (§5),
+nothing here needs a live person clicking "Allow" — a service account is
+its own robot identity with its own email address; sharing a Drive
+folder with that email (Editor access) is a one-time setup, done once by
+whoever owns the folder, after which every teammate's copy of the tool
+can upload into it indefinitely with no further login step. See the
+README's "Getting your team using it" section for the exact setup.
+
+## 7. What is deliberately not built yet
 
 - **Publishing an approved worksheet to the live site** — the pipeline
   stops at "approved and downloadable"; where it goes after that is a

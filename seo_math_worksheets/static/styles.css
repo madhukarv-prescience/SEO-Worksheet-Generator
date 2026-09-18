@@ -436,3 +436,7 @@ select:disabled{background:#f2f3f6; color:var(--muted); cursor:not-allowed;}
 .browserow.inlib{opacity:.55;}
 .browserow input[type=checkbox]{width:auto; flex:0 0 auto;}
 .browsename{flex:1; display:flex; align-items:center; gap:8px; flex-wrap:wrap;}
+
+/* ── Approved tab: send-to-Drive ─────────────────────────── */
+.stat.accent + button.btn.primary,
+#approvedStats .btn{margin-left:auto;}

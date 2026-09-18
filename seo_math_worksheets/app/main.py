@@ -11,6 +11,7 @@ who use this hand its output to clients.
 from __future__ import annotations
 
 import json
+import sqlite3
 import time
 from pathlib import Path
 
@@ -20,7 +21,7 @@ from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Redirect
 from fastapi.staticfiles import StaticFiles
 
 from app import config, generate, ingest, jobs
-from app.providers import canva
+from app.providers import canva, drive
 from app.validate import VERDICT_TEXT
 from app.db import get_conn, init_db, log_activity, worksheet_to_dict
 from app.export import worksheet_html
@@ -612,6 +613,7 @@ def api_setup():
         **status,
         "canva": {**status["canva"], **canva.availability(),
                    "connection": canva.connection_status()},
+        "drive": drive.configured(),
         "canva_note": (
             "Canva's Autofill API requires a Canva ENTERPRISE plan — this is "
             "a hard requirement from Canva, not something this app can work "
@@ -655,6 +657,75 @@ def api_canva_callback(code: str = "", state: str = "", error: str = ""):
 def api_canva_disconnect():
     canva.disconnect()
     return {"ok": True}
+
+
+# ── Shared Drive folder ──────────────────────────────────────────────
+def _send_one_to_drive(worksheet_row: dict, batch: dict) -> dict:
+    """Exports the worksheet if needed, then uploads it to the shared
+    Drive folder under a subfolder named after its source category."""
+    ws = worksheet_to_dict(worksheet_row) if isinstance(worksheet_row, sqlite3.Row) else worksheet_row
+    pdf_path = config.EXPORT_DIR / f"{ws['id']}.pdf"
+    if not pdf_path.exists():
+        html_path = worksheet_html.render_export(
+            ws, GRADE_TEMPLATES[batch["grade"]]["label"],
+            DIFFICULTY_LEVELS[batch["difficulty"]]["label"])
+        worksheet_html.render_pdf(html_path)
+        if not pdf_path.exists():
+            raise RuntimeError("Couldn't produce a PDF for this worksheet.")
+
+    with get_conn() as c:
+        src = c.execute("SELECT filename, origin_detail FROM sources WHERE id=?",
+                          (batch["source_id"],)).fetchone()
+    category = (src["origin_detail"] or "Uncategorised").split("·")[-1].strip()         if src else "Uncategorised"
+    category = category.replace("_", " ").title() or "Uncategorised"
+
+    filename = src["filename"] if src else f"{ws['id']}.pdf"
+    return drive.upload_worksheet(str(pdf_path), filename, category)
+
+
+@app.post("/api/worksheets/{worksheet_id}/send-to-drive")
+def api_send_to_drive(worksheet_id: str):
+    with get_conn() as c:
+        row = c.execute("SELECT * FROM worksheets WHERE id=?", (worksheet_id,)).fetchone()
+        if row is None:
+            raise HTTPException(404, "That worksheet no longer exists.")
+        batch = dict(c.execute("SELECT * FROM batches WHERE id=?",
+                                 (row["batch_id"],)).fetchone())
+    try:
+        result = _send_one_to_drive(row, batch)
+    except RuntimeError as e:
+        raise HTTPException(400, str(e))
+    log_activity("Sent to shared Drive folder", worksheet_to_dict(row)["title"])
+    return {"ok": True, **result}
+
+
+@app.post("/api/approved/send-all-to-drive")
+def api_send_all_to_drive():
+    if not drive.configured():
+        raise HTTPException(400,
+            "A shared Drive folder isn't set up yet. See the 'Shared Drive "
+            "folder' section in the project README to configure one.")
+
+    with get_conn() as c:
+        rows = c.execute(
+            """SELECT w.*, b.grade, b.difficulty, b.source_id
+                 FROM worksheets w JOIN batches b ON b.id = w.batch_id
+                WHERE w.review_status = 'approved'"""
+        ).fetchall()
+
+    sent, failed = [], []
+    for row in rows:
+        batch = {"grade": row["grade"], "difficulty": row["difficulty"],
+                   "source_id": row["source_id"]}
+        try:
+            _send_one_to_drive(row, batch)
+            sent.append(row["id"])
+        except Exception as e:
+            failed.append({"id": row["id"], "error": str(e)})
+
+    if sent:
+        log_activity("Sent to shared Drive folder", f"{len(sent)} approved worksheet(s)")
+    return {"sent": len(sent), "failed": failed}
 
 
 # ── Activity ───────────────────────────────────────────────────────

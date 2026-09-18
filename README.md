@@ -238,55 +238,101 @@ folder — it does all of the above by itself, including first-time setup.
 
 ## Getting your team using it, without teaching them any of this
 
-You have two options, depending on how your team works.
+**The design:** every teammate runs their own completely independent
+copy of the tool — nobody depends on anybody else's laptop, WiFi, or
+uptime. Each person can pick a different K5 category (one takes
+Kindergarten Simple Math, another takes Grade 1, and so on) and work
+through Library → Create → Review entirely on their own machine. The
+one place work comes back together is a **shared Google Drive folder** —
+every approved worksheet gets sent there with one click, organised
+automatically into a subfolder per category, so different people's work
+never collides.
 
-### Option A — one shared copy, zero install for anyone else (recommended for an office)
+### Step 1 — each person gets their own copy running
 
-Run the tool on **your own machine**, and everyone else just opens a link
-in their browser — nothing to install, nothing to clone, no key to paste.
-Because everyone shares the same running tool, they also all see the same
-library, the same worksheets, and the same approvals.
+Every teammate follows **Parts 1 and 2 of this guide** from the top —
+clone the repo, install, get their own free Groq key (or you hand out a
+shared OpenAI key — either works identically), then either run the
+usual command or just double-click `start.command`.
 
-1. Start the tool with this instead of the usual command, so other
-   devices on the network are allowed to reach it:
-   ```bash
-   cd seo_math_worksheets
-   python3 -m uvicorn app.main:app --host 0.0.0.0 --port 8020
+**If a teammate has Claude Code**, they don't need to read any of that
+themselves — see "Running this with Claude Code" below.
+
+### Step 2 — set up the shared Drive folder (done ONCE, by you)
+
+This is a one-time setup for whoever owns the shared folder — not
+something every teammate repeats.
+
+1. Go to **[console.cloud.google.com](https://console.cloud.google.com)**
+   and create a new project (or use an existing one) — name it anything,
+   e.g. `seo-worksheets`
+2. In the search bar, find **"Google Drive API"** and click **Enable**
+3. In the left menu, go to **IAM & Admin → Service Accounts** →
+   **Create Service Account**. Name it anything (e.g. `worksheet-uploader`),
+   click through the remaining steps with the defaults, then **Create**
+4. Click on the service account you just made → **Keys** tab →
+   **Add Key → Create new key → JSON**. A file downloads automatically
+5. Rename that downloaded file to exactly `service_account.json` and
+   move it into the `seo_math_worksheets` folder (next to `.env`) —
+   it's already excluded from GitHub, so it's safe to leave there
+6. Open that JSON file in a text editor, find the line that says
+   `"client_email"`, and copy the email address next to it (looks like
+   `something@your-project.iam.gserviceaccount.com`)
+7. In Google Drive, create (or pick) the folder you want everyone's
+   approved worksheets to land in. Right-click it → **Share** → paste
+   in that email address → set it to **Editor** → Share
+8. Open that folder in your browser and copy its ID from the URL —
+   the part right after `/folders/`:
    ```
-2. Find your machine's network address:
-   ```bash
-   ipconfig getifaddr en0
+   https://drive.google.com/drive/folders/1AbCdEfGhIjKlMnOpQrSt
+                                            ^^^^^^^^^^^^^^^^^^^^^ this part
    ```
-   You'll get something like `192.168.1.42`.
-3. Share this with your team (Slack, WhatsApp, whatever's easiest):
-   ```
-   http://192.168.1.42:8020
-   ```
-   They open that link in any browser, on the same office WiFi, and the
-   whole tool just works for them immediately.
+9. Open `seo_math_worksheets/.env` and paste that into
+   `GOOGLE_DRIVE_FOLDER_ID=`
+10. Restart the tool. Go to the **Setup** tab — "Shared Drive folder"
+    should now show **configured**.
 
-**Things to know about this option:**
-- Your Mac needs to **stay awake and connected** while others are using
-  it — if it sleeps or the Terminal window closes, the tool goes down
-  for everyone. Go to **System Settings → Battery** and turn off
-  "Put display to sleep" while it's running a session, or run
-  `caffeinate` in a second Terminal tab to keep the Mac awake.
-- The address can **change** if your Mac reconnects to WiFi — if the
-  link stops working, just run the `ipconfig` command again and
-  re-share the new one.
-- This only works for people **on the same network** (same office WiFi).
-  Someone working from home won't be able to reach it this way — see
-  Option B.
-- There's no login on this tool, so only share the link with people you
-  trust to use it — anyone with the link who's on the network can use it.
+Once it's set up on your machine, share `service_account.json` and the
+`GOOGLE_DRIVE_FOLDER_ID` value with any teammate who also wants to send
+straight to Drive from their own copy — everyone points at the same
+folder using the same credentials.
 
-### Option B — everyone runs their own copy (for remote team members)
+### Step 3 — using it day to day
 
-Anyone not on the same network follows **Parts 1 and 2 of this guide**
-from the top — clone the repo, install, get their own free Groq key,
-run `start.command`. Each person's copy is independent (their own
-library, their own approvals) unless you set up shared storage
-separately.
+On the **Approved** tab, every worksheet gets a **Send to Drive**
+button, and there's a **Send all approved to Drive →** button at the
+top for sending everything at once. That's it — approved worksheets
+show up in the shared Drive folder, sorted into a subfolder named after
+whichever K5 category they came from.
+
+### If you'd rather have one single shared instance instead
+
+If everyone happens to be on the same office WiFi and you'd prefer one
+running copy that everyone opens in their browser (same library, same
+approvals, nothing to install for anyone), that's also possible — run
+`python3 -m uvicorn app.main:app --host 0.0.0.0 --port 8020` and share
+`http://<your machine's IP>:8020` (find it with `ipconfig getifaddr en0`).
+The trade-off: it depends on your machine staying on and connected, and
+only works for people on the same network. The Drive-folder design above
+avoids both of those limits, which is why it's the default recommendation.
+
+---
+
+## Running this with Claude Code
+
+If a teammate has Claude Code, they can skip reading this whole guide.
+Have them open Claude Code in an empty folder and paste this:
+
+> Clone https://github.com/madhukarv-prescience/SEO-Worksheet-Generator.git,
+> install its dependencies, help me get a free Groq API key from
+> console.groq.com/keys and put it in `seo_math_worksheets/.env`, then
+> start the tool and open it in my browser.
+
+Claude Code will do everything — cloning, installing, setting up the
+key, starting the server — the same way this whole project was built.
+They can then just describe what they want in plain English going
+forward: *"fetch some Grade 2 worksheets"*, *"generate 3 versions of
+this one"*, *"send my approved worksheets to the shared Drive folder"*.
 
 ---
 

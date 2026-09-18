@@ -109,6 +109,12 @@ def setup_complete() -> bool:
     return active_text_provider() != "sample"
 
 
+# ── Shared Drive folder (team output, not a per-user key) ──────────
+GOOGLE_SERVICE_ACCOUNT_FILE = os.getenv(
+    "GOOGLE_SERVICE_ACCOUNT_FILE", str(Path(__file__).resolve().parent.parent / "service_account.json"))
+GOOGLE_DRIVE_FOLDER_ID = os.getenv("GOOGLE_DRIVE_FOLDER_ID", "")
+
+
 def key_status() -> dict:
     """What's configured, for a settings screen — never the key values
     themselves, only whether one is present and which one is active."""
@@ -131,4 +137,6 @@ def key_status() -> dict:
             "client_secret_set": bool(CANVA_CLIENT_SECRET),
             "brand_template_set": bool(CANVA_BRAND_TEMPLATE_ID),
         },
+        "drive": {"configured": bool(GOOGLE_DRIVE_FOLDER_ID
+                                       and Path(GOOGLE_SERVICE_ACCOUNT_FILE).is_file())},
     }
