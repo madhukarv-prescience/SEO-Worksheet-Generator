@@ -102,6 +102,42 @@ def api_from_collection(category: str = Form(...), limit: int = Form(10)):
         raise HTTPException(400, str(e))
 
 
+@app.get("/api/collections/{category}/browse")
+def api_browse_collection(category: str):
+    """Every file inside one fetched K5 collection — the folder-browser
+    view, so a person can look inside before choosing what to bring in."""
+    try:
+        return {"category": category, "files": ingest.browse_k5_collection(category)}
+    except ValueError as e:
+        raise HTTPException(404, str(e))
+
+
+@app.get("/api/collections/{category}/preview/{filename}")
+def api_preview_collection_file(category: str, filename: str):
+    """Opens a fetched-but-not-yet-imported PDF directly, so a reviewer
+    can look at it before deciding to add it to the library."""
+    try:
+        path = ingest.preview_k5_file(category, filename)
+    except ValueError as e:
+        raise HTTPException(404, str(e))
+    return FileResponse(path, media_type="application/pdf",
+                         headers={"Content-Disposition": f'inline; filename="{filename}"'})
+
+
+@app.post("/api/sources/from-collection-selected")
+async def api_from_collection_selected(request: Request):
+    """Import exactly the files a person ticked in the folder-browser."""
+    body = await request.json()
+    category = body.get("category", "")
+    filenames = body.get("filenames") or []
+    if not filenames:
+        raise HTTPException(400, "Pick at least one file first.")
+    try:
+        return {"added": ingest.import_k5_selected(category, filenames)}
+    except ValueError as e:
+        raise HTTPException(404, str(e))
+
+
 @app.post("/api/sources/remove-from-collection")
 def api_remove_from_collection(category: str = Form(...), count: int = Form(10),
                                 cascade: bool = Form(False)):

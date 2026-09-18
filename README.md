@@ -164,7 +164,11 @@ This is where worksheets come from. You have three choices, all on the
 same screen:
 
 - **From our collections** — worksheets already downloaded from K5
-  Learning. Type a number and click **Add**.
+  Learning. Either type a number and click **Add** (grabs that many),
+  or click **Browse 📂** to open the folder and see every worksheet
+  inside by name — tick the ones you actually want (click a name's
+  **View** button to open the PDF first if you're not sure), then
+  **Add selected**.
 - **From Google Drive** — paste a link to a single PDF file
   (must be shared as "Anyone with the link").
 - **From your computer** — click **Choose file** and pick a PDF.
@@ -226,6 +230,63 @@ python3 -m uvicorn app.main:app --port 8020
 
 (add `source .venv/bin/activate` before that line if you set up a venv
 earlier) then open `http://127.0.0.1:8020` again.
+
+**Or just double-click `start.command`** in the `seo_math_worksheets`
+folder — it does all of the above by itself, including first-time setup.
+
+---
+
+## Getting your team using it, without teaching them any of this
+
+You have two options, depending on how your team works.
+
+### Option A — one shared copy, zero install for anyone else (recommended for an office)
+
+Run the tool on **your own machine**, and everyone else just opens a link
+in their browser — nothing to install, nothing to clone, no key to paste.
+Because everyone shares the same running tool, they also all see the same
+library, the same worksheets, and the same approvals.
+
+1. Start the tool with this instead of the usual command, so other
+   devices on the network are allowed to reach it:
+   ```bash
+   cd seo_math_worksheets
+   python3 -m uvicorn app.main:app --host 0.0.0.0 --port 8020
+   ```
+2. Find your machine's network address:
+   ```bash
+   ipconfig getifaddr en0
+   ```
+   You'll get something like `192.168.1.42`.
+3. Share this with your team (Slack, WhatsApp, whatever's easiest):
+   ```
+   http://192.168.1.42:8020
+   ```
+   They open that link in any browser, on the same office WiFi, and the
+   whole tool just works for them immediately.
+
+**Things to know about this option:**
+- Your Mac needs to **stay awake and connected** while others are using
+  it — if it sleeps or the Terminal window closes, the tool goes down
+  for everyone. Go to **System Settings → Battery** and turn off
+  "Put display to sleep" while it's running a session, or run
+  `caffeinate` in a second Terminal tab to keep the Mac awake.
+- The address can **change** if your Mac reconnects to WiFi — if the
+  link stops working, just run the `ipconfig` command again and
+  re-share the new one.
+- This only works for people **on the same network** (same office WiFi).
+  Someone working from home won't be able to reach it this way — see
+  Option B.
+- There's no login on this tool, so only share the link with people you
+  trust to use it — anyone with the link who's on the network can use it.
+
+### Option B — everyone runs their own copy (for remote team members)
+
+Anyone not on the same network follows **Parts 1 and 2 of this guide**
+from the top — clone the repo, install, get their own free Groq key,
+run `start.command`. Each person's copy is independent (their own
+library, their own approvals) unless you set up shared storage
+separately.
 
 ---
 

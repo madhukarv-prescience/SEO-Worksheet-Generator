@@ -419,3 +419,20 @@ select:disabled{background:#f2f3f6; color:var(--muted); cursor:not-allowed;}
 .canvawarn{color:var(--orange); font-weight:500;}
 .setupactions{display:flex; gap:8px; margin-top:10px; flex-wrap:wrap;}
 .btn.sm.primary{background:var(--orange); border-color:var(--orange); color:#fff;}
+
+/* ── folder browser modal ────────────────────────────────── */
+.browsebar{display:flex; gap:8px; margin:12px 0; flex-wrap:wrap;}
+.browsebar input{flex:1; min-width:160px;}
+.browsebar .btn{flex:0 0 auto;}
+.browselist{
+  max-height:50vh; overflow-y:auto; border-top:1px solid var(--line);
+  padding-top:8px; display:flex; flex-direction:column; gap:2px;
+}
+.browserow{
+  display:flex; align-items:center; gap:11px; padding:9px 8px;
+  border-radius:7px; cursor:pointer; font-size:13.5px;
+}
+.browserow:hover{background:var(--paper);}
+.browserow.inlib{opacity:.55;}
+.browserow input[type=checkbox]{width:auto; flex:0 0 auto;}
+.browsename{flex:1; display:flex; align-items:center; gap:8px; flex-wrap:wrap;}

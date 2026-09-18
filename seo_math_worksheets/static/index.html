@@ -277,6 +277,24 @@
   </div>
 </div>
 
+<div id="browseModal" class="modal" hidden>
+  <div class="modalbox wide">
+    <h3 id="browseTitle">Browse collection</h3>
+    <p class="hint">Tick the worksheets you want, then add them. Click a name to open the PDF first.</p>
+    <div class="browsebar">
+      <input type="text" id="browseFilter" placeholder="Filter by name…">
+      <button class="btn sm" id="browseSelectAll">Select all shown</button>
+      <button class="btn sm" id="browseSelectNone">Clear</button>
+    </div>
+    <div id="browseList" class="browselist"></div>
+    <div class="modalfoot">
+      <button class="btn" id="browseCancel">Cancel</button>
+      <button class="btn primary" id="browseAdd">Add selected (<span id="browseCount">0</span>)</button>
+    </div>
+    <p id="browseStatus" class="status"></p>
+  </div>
+</div>
+
 <div id="editModal" class="modal" hidden>
   <div class="modalbox wide">
     <h3>Edit questions</h3>

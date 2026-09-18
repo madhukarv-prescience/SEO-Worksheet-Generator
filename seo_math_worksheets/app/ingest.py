@@ -11,6 +11,7 @@ doing it this way — adding a fourth route later touches only this file.
 """
 from __future__ import annotations
 
+import json
 import re
 import shutil
 from pathlib import Path
@@ -73,6 +74,75 @@ def list_k5_available() -> list[dict]:
     return out
 
 
+_BROWSE_CACHE_DIR = UPLOAD_DIR.parent / "browse_cache"
+_BROWSE_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def _browse_cache_path(category: str) -> Path:
+    # category is always one of our own configured folder names, never
+    # user input reaching a filesystem path — safe to use directly.
+    return _BROWSE_CACHE_DIR / f"{category}.json"
+
+
+def browse_k5_collection(category: str) -> list[dict]:
+    """Every PDF inside one fetched category, for the folder-browser view —
+    like opening a Finder folder and seeing what's inside before deciding
+    what to bring in, rather than "add the first N alphabetically".
+
+    Extracting text from every PDF to run the quality heuristic is slow
+    for a large folder (373 files took long enough to feel like the UI
+    had hung on first use) — so results are cached to disk, keyed by each
+    file's modification time, and only re-extracted when a file is new or
+    has actually changed. Re-opening the same folder afterwards is
+    instant.
+    """
+    folder = K5_OUTPUT_DIR / category
+    if not folder.is_dir():
+        raise ValueError(f"No such collection: {category}")
+
+    with get_conn() as c:
+        known = {r["filename"] for r in
+                  c.execute("SELECT filename FROM sources WHERE origin='k5'")}
+
+    cache_path = _browse_cache_path(category)
+    cache = {}
+    if cache_path.exists():
+        try:
+            cache = json.loads(cache_path.read_text())
+        except (json.JSONDecodeError, OSError):
+            cache = {}
+
+    out = []
+    changed = False
+    for pdf in sorted(folder.glob("*.pdf")):
+        mtime = pdf.stat().st_mtime
+        cached = cache.get(pdf.name)
+        if cached and cached.get("mtime") == mtime:
+            likely = cached["likely_has_questions"]
+        else:
+            text = ""
+            try:
+                text, _ = _extract_text(pdf)
+            except Exception:
+                pass
+            likely = looks_like_questions(text)
+            cache[pdf.name] = {"mtime": mtime, "likely_has_questions": likely}
+            changed = True
+
+        out.append({
+            "filename": pdf.name,
+            "already_added": pdf.name in known,
+            "likely_has_questions": likely,
+            # A readable title guess from the filename, since these PDFs
+            # don't have a title anywhere else visible before opening them.
+            "title_guess": pdf.stem.replace("-", " ").replace("_", " ").title(),
+        })
+
+    if changed:
+        cache_path.write_text(json.dumps(cache))
+    return out
+
+
 def import_from_k5(category: str, limit: int = 10) -> list[dict]:
     folder = K5_OUTPUT_DIR / category
     if not folder.is_dir():
@@ -93,6 +163,42 @@ def import_from_k5(category: str, limit: int = 10) -> list[dict]:
     log_activity("Worksheets added to library",
                   f"{len(added)} from {category.replace('_', ' ')}")
     return added
+
+
+def import_k5_selected(category: str, filenames: list[str]) -> list[dict]:
+    """Import exactly the files a person picked in the folder-browser,
+    rather than the first N in alphabetical order."""
+    folder = K5_OUTPUT_DIR / category
+    if not folder.is_dir():
+        raise ValueError(f"No such collection: {category}")
+
+    with get_conn() as c:
+        known = {r["filename"] for r in
+                  c.execute("SELECT filename FROM sources WHERE origin='k5'")}
+
+    added = []
+    for name in filenames:
+        # Reject anything that isn't a plain filename already known to be
+        # in this folder — never build a path from unchecked user input.
+        pdf = folder / name
+        if name in known or "/" in name or not pdf.is_file() or pdf.suffix != ".pdf":
+            continue
+        added.append(_store(name, pdf, "k5", f"K5 · {category}"))
+
+    log_activity("Worksheets added to library",
+                  f"{len(added)} hand-picked from {category.replace('_', ' ')}")
+    return added
+
+
+def preview_k5_file(category: str, filename: str) -> Path:
+    """Path to a fetched-but-not-yet-imported PDF, for the browser's View
+    button. Filename is validated against the real folder contents so this
+    can never be used to read an arbitrary path on disk."""
+    folder = K5_OUTPUT_DIR / category
+    path = folder / filename
+    if "/" in filename or not path.is_file() or path.suffix != ".pdf" or not folder.is_dir():
+        raise ValueError("That file isn't in this collection.")
+    return path
 
 
 def remove_from_k5(category: str, count: int, cascade: bool = False) -> dict:

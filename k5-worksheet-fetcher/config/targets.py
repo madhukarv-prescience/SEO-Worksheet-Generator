@@ -48,27 +48,64 @@ TARGETS = {
                         "odd/even, ~373 PDFs)",
     },
 
-    "full-math-worksheets": {
+    # Grades 1-6, split into their own targets (rather than one combined
+    # "full-math-worksheets" target) so a team member can fetch exactly the
+    # grade they need — e.g. just Grade 1 — instead of pulling every grade's
+    # PDFs into one undifferentiated folder. Same site, same PDF pattern,
+    # each grade's sub_root gets its own output_subdir so it shows up as
+    # its own row in the tool's Library.
+    "grade-1-math": {
         "hub_path": "/free-math-worksheets",
-        "sub_roots": [
-            "/free-math-worksheets/first-grade-1",
-            "/free-math-worksheets/second-grade-2",
-            "/free-math-worksheets/third-grade-3",
-            "/free-math-worksheets/fourth-grade-4",
-            "/free-math-worksheets/fifth-grade-5",
-            "/free-math-worksheets/sixth-grade-6",
-            # Deliberately NOT crawling /free-math-worksheets/topics or
-            # /math-drills — those re-list the same worksheets under a
-            # different navigation path. Crawling them too would just mean
-            # more page fetches for zero new PDFs (the URL set dedupes
-            # anyway), so we skip them to keep the crawl faster.
-        ],
+        "root_path": "/free-math-worksheets/first-grade-1",
         "boundary_mode": "prefix",
         "pdf_pattern": r"/worksheets/.*\.pdf$",
-        "output_subdir": "full_math_worksheets",
-        "description": "Full K5 Math Worksheets site, grades 1-6 (likely several "
-                        "thousand PDFs — scan first to see the real count)",
+        "output_subdir": "grade_1_math",
+        "description": "Grade 1 Math Worksheets (K5 Learning)",
     },
+    "grade-2-math": {
+        "hub_path": "/free-math-worksheets",
+        "root_path": "/free-math-worksheets/second-grade-2",
+        "boundary_mode": "prefix",
+        "pdf_pattern": r"/worksheets/.*\.pdf$",
+        "output_subdir": "grade_2_math",
+        "description": "Grade 2 Math Worksheets (K5 Learning)",
+    },
+    "grade-3-math": {
+        "hub_path": "/free-math-worksheets",
+        "root_path": "/free-math-worksheets/third-grade-3",
+        "boundary_mode": "prefix",
+        "pdf_pattern": r"/worksheets/.*\.pdf$",
+        "output_subdir": "grade_3_math",
+        "description": "Grade 3 Math Worksheets (K5 Learning)",
+    },
+    "grade-4-math": {
+        "hub_path": "/free-math-worksheets",
+        "root_path": "/free-math-worksheets/fourth-grade-4",
+        "boundary_mode": "prefix",
+        "pdf_pattern": r"/worksheets/.*\.pdf$",
+        "output_subdir": "grade_4_math",
+        "description": "Grade 4 Math Worksheets (K5 Learning)",
+    },
+    "grade-5-math": {
+        "hub_path": "/free-math-worksheets",
+        "root_path": "/free-math-worksheets/fifth-grade-5",
+        "boundary_mode": "prefix",
+        "pdf_pattern": r"/worksheets/.*\.pdf$",
+        "output_subdir": "grade_5_math",
+        "description": "Grade 5 Math Worksheets (K5 Learning)",
+    },
+    "grade-6-math": {
+        "hub_path": "/free-math-worksheets",
+        "root_path": "/free-math-worksheets/sixth-grade-6",
+        "boundary_mode": "prefix",
+        "pdf_pattern": r"/worksheets/.*\.pdf$",
+        "output_subdir": "grade_6_math",
+        "description": "Grade 6 Math Worksheets (K5 Learning)",
+    },
+    # NOTE: deliberately not crawling /free-math-worksheets/topics or
+    # /math-drills for any of the above — those re-list the same worksheets
+    # under a different navigation path. Crawling them too would just mean
+    # more page fetches for zero new PDFs (the URL set dedupes anyway).
 }
 
 CRAWL = {

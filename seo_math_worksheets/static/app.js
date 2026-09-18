@@ -343,6 +343,89 @@ async function loadSetup() {
   });
 }
 
+/* ── folder browser (Finder-style file picker) ──────────────── */
+let browseState = { category: '', files: [] };
+
+async function openBrowser(category) {
+  const modal = $('#browseModal');
+  $('#browseTitle').textContent = category.replace(/_/g, ' ');
+  $('#browseList').innerHTML = '<p class="muted">Loading…</p>';
+  $('#browseStatus').textContent = '';
+  $('#browseFilter').value = '';
+  modal.hidden = false;
+
+  try {
+    const r = await api(`/api/collections/${category}/browse`);
+    browseState = { category, files: r.files };
+    renderBrowseList();
+  } catch (e) {
+    $('#browseList').innerHTML = `<p class="status err">${esc(e.message)}</p>`;
+  }
+}
+
+function renderBrowseList() {
+  const filter = ($('#browseFilter').value || '').toLowerCase();
+  const rows = browseState.files.filter(f =>
+    !filter || f.filename.toLowerCase().includes(filter) ||
+    f.title_guess.toLowerCase().includes(filter));
+
+  $('#browseList').innerHTML = rows.length
+    ? rows.map(f => `
+        <label class="browserow ${f.already_added ? 'inlib' : ''}">
+          <input type="checkbox" class="browsecheck" value="${esc(f.filename)}"
+                 ${f.already_added ? 'disabled' : ''}>
+          <span class="browsename">
+            ${esc(f.title_guess)}
+            ${f.likely_has_questions === false ? '<span class="flagnote">⚠ activity sheet</span>' : ''}
+            ${f.already_added ? '<span class="opt">— already in your library</span>' : ''}
+          </span>
+          <a class="btn sm" href="/api/collections/${browseState.category}/preview/${encodeURIComponent(f.filename)}"
+             target="_blank" rel="noopener" onclick="event.stopPropagation()">View</a>
+        </label>`).join('')
+    : '<p class="muted">No files match.</p>';
+
+  updateBrowseCount();
+  $$('.browsecheck').forEach(cb => cb.addEventListener('change', updateBrowseCount));
+}
+
+function updateBrowseCount() {
+  $('#browseCount').textContent = $$('.browsecheck:checked').length;
+}
+
+$('#browseFilter').addEventListener('input', renderBrowseList);
+$('#browseSelectAll').addEventListener('click', () => {
+  $$('.browsecheck:not(:disabled)').forEach(cb => cb.checked = true);
+  updateBrowseCount();
+});
+$('#browseSelectNone').addEventListener('click', () => {
+  $$('.browsecheck').forEach(cb => cb.checked = false);
+  updateBrowseCount();
+});
+$('#browseCancel').addEventListener('click', () => { $('#browseModal').hidden = true; });
+
+$('#browseAdd').addEventListener('click', async () => {
+  const filenames = $$('.browsecheck:checked').map(cb => cb.value);
+  if (!filenames.length) { $('#browseStatus').textContent = 'Tick at least one file first.'; return; }
+
+  const st = $('#browseStatus');
+  st.className = 'status'; st.innerHTML = '<span class="spinner"></span>Adding…';
+  $('#browseAdd').disabled = true;
+  try {
+    const r = await fetch('/api/sources/from-collection-selected', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ category: browseState.category, filenames }),
+    });
+    const body = await r.json();
+    if (!r.ok) throw new Error(body.detail || 'Something went wrong.');
+    toast(`${body.added.length} worksheet(s) added`);
+    $('#browseModal').hidden = true;
+    await loadLibrary();
+  } catch (e) {
+    st.className = 'status err'; st.textContent = e.message;
+  }
+  $('#browseAdd').disabled = false;
+});
+
 /* ── templates ───────────────────────────────────────────── */
 async function loadTemplates() {
   const { templates } = await api('/api/templates');
@@ -413,6 +496,7 @@ async function loadLibrary() {
                     ${remaining ? '' : 'disabled title="All of them are already in your library"'}>Add</button>
             <button class="btn sm" data-rm="${esc(c.category)}"
                     ${c.already_added ? '' : 'disabled title="None of these are in your library yet"'}>Remove</button>
+            <button class="btn sm primary" data-browse="${esc(c.category)}">Browse 📂</button>
           </div>
         </div>`; }).join('')
     : '<p class="muted">No fetched collections found.</p>';
@@ -432,6 +516,9 @@ async function loadLibrary() {
       await loadLibrary();
     } catch (e) { toast(e.message); b.disabled = false; b.textContent = 'Add'; }
   }));
+
+  $$('#collections [data-browse]').forEach(b => b.addEventListener('click', () =>
+    openBrowser(b.dataset.browse)));
 
   $$('#collections [data-rm]').forEach(b => b.addEventListener('click', async () => {
     const cat = b.dataset.rm;
