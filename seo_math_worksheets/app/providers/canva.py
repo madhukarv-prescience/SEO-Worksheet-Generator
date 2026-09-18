@@ -310,13 +310,11 @@ def _canva_asset(field_values: dict, image_path: str, out_path: str) -> str | No
 
     # 1. Upload the image asset.
     with open(image_path, "rb") as f:
-        # NOTE: the exact JSON shape of Asset-Upload-Metadata was not
-        # confirmed against Canva's OpenAPI spec while writing this (the
-        # documentation excerpt available described it only as "Base64
-        # encoded filename", not the surrounding key). Verify this header
-        # against https://www.canva.dev/docs/connect/api-reference/ once
-        # a real connection exists to test against — if uploads fail with
-        # a 400 mentioning this header, this is the line to fix.
+        # Confirmed against Canva's own OpenAPI spec (openapi/spec.yml in
+        # canva-sdks/canva-connect-api-starter-kit on GitHub): the header
+        # is exactly {"name_base64": "<base64 of the filename string>"}.
+        # This was flagged as an unconfirmed guess earlier — it wasn't a
+        # guess, it matches.
         meta = base64.b64encode(b"worksheet-image.png").decode()
         upload = httpx.post(
             f"{CANVA_API_BASE}/asset-uploads",

@@ -169,12 +169,13 @@ encrypted token storage with automatic refresh, and the real
 upload → autofill → export job sequence (each of those three steps is
 an asynchronous job that must be polled, not a single request/response).
 
-One implementation detail is flagged in the code as unconfirmed against
-Canva's live API: the exact shape of the `Asset-Upload-Metadata` header
-sent when uploading an image. It's implemented against the best
-available documentation but hasn't been exercised against a real
-connection — see the comment at that line in `canva.py` if an upload
-ever fails with a 400.
+Every request shape (scopes, the asset-upload header, the autofill
+request, the export format) has been checked directly against Canva's
+own published OpenAPI spec (`openapi/spec.yml` in
+`canva-sdks/canva-connect-api-starter-kit` on GitHub), not just the
+prose documentation — so this is believed correct, though it still has
+never been exercised against a real, live connection (that needs an
+actual Canva Enterprise account to test against).
 
 ## 6. What is deliberately not built yet
 
