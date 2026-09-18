@@ -360,13 +360,34 @@ async function loadSetup() {
     </div>
 
     <h2 class="sectiontitle">Shared team output</h2>
-    <div class="setupcard ${s.drive ? 'on' : ''}">
+    <div class="setupcard ${s.drive.configured ? 'on' : ''}">
       <div class="setupcardhead">
-        <span class="setupdot ${s.drive ? 'on' : ''}"></span>
+        <span class="setupdot ${s.drive.configured ? 'on' : ''}"></span>
         <strong>Shared Drive folder</strong>
-        ${s.drive ? '<span class="pill ok">configured</span>' : '<span class="pill warn">not set up</span>'}
+        ${s.drive.configured
+          ? '<span class="pill ok">connected</span>'
+          : s.drive.folder_id
+            ? '<span class="pill warn">folder set, credential missing</span>'
+            : '<span class="pill warn">not set up</span>'}
       </div>
-      <div class="setupline">Where "Send to Drive" on the Approved tab uploads finished worksheets — organised into a subfolder per source category, so teammates working on different collections don't collide. Independent of any AI provider; see the README's "Shared Drive folder" section to set one up.</div>
+      <div class="setupline">Where "Send to Drive" on the Approved tab uploads finished worksheets — organised into a subfolder per source category, so teammates working on different collections don't collide.</div>
+
+      ${s.drive.folder_id ? `<div class="setupline">
+        Current folder: <a href="https://drive.google.com/drive/folders/${esc(s.drive.folder_id)}" target="_blank" rel="noopener">${esc(s.drive.folder_id)}</a>
+        <span class="opt">(${esc(s.drive.source)})</span>
+      </div>` : ''}
+
+      ${!s.drive.credential_ready ? `<div class="setupline canvawarn">
+        ⚠ No credential file found yet (<code>service_account.json</code>). The folder above is saved, but nothing can upload until this file exists — see the "Shared Drive folder" setup steps in the README.
+      </div>` : ''}
+
+      <div class="drivesetrow">
+        <input type="text" id="driveLinkInput" placeholder="Paste a Google Drive folder link…"
+               value="${esc(s.drive.folder_link || '')}">
+        <button class="btn sm primary" id="driveLinkSave">Save</button>
+        ${s.drive.folder_id ? '<button class="btn sm" id="driveLinkClear">Remove</button>' : ''}
+      </div>
+      <p id="driveLinkStatus" class="status"></p>
     </div>
 
     <h2 class="sectiontitle">The validation gate</h2>
@@ -386,6 +407,28 @@ async function loadSetup() {
     if (!confirm('Disconnect Canva? You can reconnect any time from here.')) return;
     await api('/api/canva/disconnect', { method: 'POST' });
     toast('Canva disconnected');
+    loadSetup();
+  });
+
+  $('#driveLinkSave').addEventListener('click', async () => {
+    const link = $('#driveLinkInput').value.trim();
+    if (!link) { $('#driveLinkStatus').textContent = 'Paste a folder link first.'; return; }
+    const st = $('#driveLinkStatus');
+    st.className = 'status'; st.innerHTML = '<span class="spinner"></span>Saving…';
+    try {
+      await api('/api/drive/folder', form({ link }));
+      toast('Shared Drive folder saved');
+      loadSetup();
+    } catch (e) {
+      st.className = 'status err'; st.textContent = e.message;
+    }
+  });
+
+  const dlClear = $('#driveLinkClear');
+  if (dlClear) dlClear.addEventListener('click', async () => {
+    if (!confirm('Remove the shared Drive folder setting?')) return;
+    await api('/api/drive/folder', { method: 'DELETE' });
+    toast('Removed');
     loadSetup();
   });
 }

@@ -38,15 +38,96 @@ says so plainly rather than pretending the button works.
 """
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 from app import config
+from app.db import get_conn, now
+
+
+# ── Which folder to upload into ─────────────────────────────────────
+# Two independent pieces, both required:
+#   1. The FOLDER — which Drive folder. Set from the Setup screen (paste
+#      a link, click Save) and stored in the database, so it takes
+#      effect immediately with no restart. Falls back to
+#      GOOGLE_DRIVE_FOLDER_ID in .env if nothing's been saved in the UI.
+#   2. The CREDENTIAL — service_account.json. This is a real secret
+#      file, not a value, so it stays a file on disk / an .env path,
+#      never something typed into a web form and stored in the database.
+_FOLDER_ID_PATTERNS = [
+    r"/folders/([a-zA-Z0-9_-]{10,})",   # .../drive/folders/<id>?usp=...
+    r"[?&]id=([a-zA-Z0-9_-]{10,})",     # .../open?id=<id>
+]
+
+
+def parse_folder_link(text: str) -> str:
+    """Pulls a Drive folder ID out of whatever someone pasted — a full
+    share link (any of Drive's URL shapes) or a bare ID typed directly.
+    Raises ValueError with a message safe to show in the UI if nothing
+    that looks like a folder ID can be found.
+    """
+    text = (text or "").strip()
+    for pattern in _FOLDER_ID_PATTERNS:
+        m = re.search(pattern, text)
+        if m:
+            return m.group(1)
+    # A bare ID, pasted directly rather than as a URL. Drive folder IDs
+    # are alphanumeric plus - and _, and meaningfully long — long enough
+    # that a plausible-but-wrong short string won't be silently accepted.
+    if re.fullmatch(r"[a-zA-Z0-9_-]{10,}", text):
+        return text
+    raise ValueError(
+        "That doesn't look like a Google Drive folder link. Open the "
+        "folder in Drive and copy its link (Share -> Copy link)."
+    )
+
+
+def set_folder(link_or_id: str) -> str:
+    """Saves the shared folder from a pasted link or ID. Returns the
+    resolved folder ID. This is what the Setup screen's 'Save' button
+    calls — takes effect immediately, no restart needed."""
+    folder_id = parse_folder_link(link_or_id)
+    with get_conn() as c:
+        c.execute(
+            """INSERT INTO drive_settings (id, folder_id, folder_link, updated_at)
+               VALUES ('default', ?, ?, ?)
+               ON CONFLICT(id) DO UPDATE SET
+                 folder_id=excluded.folder_id,
+                 folder_link=excluded.folder_link,
+                 updated_at=excluded.updated_at""",
+            (folder_id, link_or_id.strip(), now()),
+        )
+    return folder_id
+
+
+def get_folder() -> dict:
+    """The folder currently in effect, and where it came from — the
+    in-app setting (if anyone has saved one) or the .env fallback."""
+    with get_conn() as c:
+        row = c.execute(
+            "SELECT folder_id, folder_link, updated_at FROM drive_settings WHERE id='default'"
+        ).fetchone()
+    if row:
+        return {"folder_id": row["folder_id"], "folder_link": row["folder_link"],
+                 "source": "saved in Setup", "updated_at": row["updated_at"]}
+    if config.GOOGLE_DRIVE_FOLDER_ID:
+        return {"folder_id": config.GOOGLE_DRIVE_FOLDER_ID, "folder_link": None,
+                 "source": ".env", "updated_at": None}
+    return {"folder_id": None, "folder_link": None, "source": None, "updated_at": None}
+
+
+def clear_folder() -> None:
+    with get_conn() as c:
+        c.execute("DELETE FROM drive_settings WHERE id='default'")
+
+
+def credential_ready() -> bool:
+    return bool(config.GOOGLE_SERVICE_ACCOUNT_FILE
+                and Path(config.GOOGLE_SERVICE_ACCOUNT_FILE).is_file())
 
 
 def configured() -> bool:
-    return bool(config.GOOGLE_SERVICE_ACCOUNT_FILE
-                and Path(config.GOOGLE_SERVICE_ACCOUNT_FILE).is_file()
-                and config.GOOGLE_DRIVE_FOLDER_ID)
+    return credential_ready() and bool(get_folder()["folder_id"])
 
 
 def _service():
@@ -118,7 +199,8 @@ def upload_worksheet(pdf_path: str, filename: str, category: str) -> dict:
     from googleapiclient.http import MediaFileUpload
 
     service = _service()
-    folder_id = _subfolder_id(service, category)
+    parent_id = get_folder()["folder_id"]
+    folder_id = _subfolder_id(service, parent_id, category)
 
     media = MediaFileUpload(pdf_path, mimetype="application/pdf", resumable=False)
     file = service.files().create(

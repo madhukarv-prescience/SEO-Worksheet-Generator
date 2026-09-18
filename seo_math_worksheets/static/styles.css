@@ -440,3 +440,8 @@ select:disabled{background:#f2f3f6; color:var(--muted); cursor:not-allowed;}
 /* ── Approved tab: send-to-Drive ─────────────────────────── */
 .stat.accent + button.btn.primary,
 #approvedStats .btn{margin-left:auto;}
+
+/* ── Drive folder paste box ──────────────────────────────── */
+.drivesetrow{display:flex; gap:8px; margin-top:11px; flex-wrap:wrap;}
+.drivesetrow input{flex:1; min-width:200px;}
+.drivesetrow .btn{flex:0 0 auto;}

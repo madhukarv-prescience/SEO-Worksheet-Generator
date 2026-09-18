@@ -281,16 +281,12 @@ something every teammate repeats.
 7. In Google Drive, create (or pick) the folder you want everyone's
    approved worksheets to land in. Right-click it → **Share** → paste
    in that email address → set it to **Editor** → Share
-8. Open that folder in your browser and copy its ID from the URL —
-   the part right after `/folders/`:
-   ```
-   https://drive.google.com/drive/folders/1AbCdEfGhIjKlMnOpQrSt
-                                            ^^^^^^^^^^^^^^^^^^^^^ this part
-   ```
-9. Open `seo_math_worksheets/.env` and paste that into
-   `GOOGLE_DRIVE_FOLDER_ID=`
-10. Restart the tool. Go to the **Setup** tab — "Shared Drive folder"
-    should now show **configured**.
+8. Copy that folder's **link** (Share → Copy link)
+9. Open the tool, go to the **Setup** tab, find **"Shared Drive
+   folder"**, paste the link into the box, click **Save**. It takes
+   effect immediately — no restart needed, and the pill should change
+   to **connected** (as long as `service_account.json` from step 4 is
+   already sitting in the `seo_math_worksheets` folder).
 
 Once it's set up on your machine, share `service_account.json` and the
 `GOOGLE_DRIVE_FOLDER_ID` value with any teammate who also wants to send
@@ -318,21 +314,94 @@ avoids both of those limits, which is why it's the default recommendation.
 
 ---
 
-## Running this with Claude Code
+## Running this with Claude Code — step by step
 
-If a teammate has Claude Code, they can skip reading this whole guide.
-Have them open Claude Code in an empty folder and paste this:
+If a teammate has Claude Code, they can skip almost everything above.
+Here's the exact sequence.
+
+**Step 1 — open Claude Code anywhere** (an empty folder is fine — it'll
+create its own).
+
+**Step 2 — paste this in:**
 
 > Clone https://github.com/madhukarv-prescience/SEO-Worksheet-Generator.git,
-> install its dependencies, help me get a free Groq API key from
-> console.groq.com/keys and put it in `seo_math_worksheets/.env`, then
-> start the tool and open it in my browser.
+> install `seo_math_worksheets`'s dependencies, help me get a free Groq
+> API key from console.groq.com/keys and put it in
+> `seo_math_worksheets/.env`, then start the tool and open it in my
+> browser.
 
-Claude Code will do everything — cloning, installing, setting up the
-key, starting the server — the same way this whole project was built.
-They can then just describe what they want in plain English going
-forward: *"fetch some Grade 2 worksheets"*, *"generate 3 versions of
-this one"*, *"send my approved worksheets to the shared Drive folder"*.
+Claude Code will clone the repo, install everything, walk them through
+getting a key, start the server, and open `http://127.0.0.1:8020` — the
+same sequence used to build this whole project in the first place.
+
+**Step 3 — if the team is using a shared Drive folder** (see below),
+paste this too:
+
+> Paste this Drive folder link into the Setup tab's "Shared Drive
+> folder" box and save it: `<the link Madhukar gave you>`
+
+If the credential file (`service_account.json`) hasn't been shared with
+them separately, tell Claude Code that too — it'll explain where to put
+it.
+
+**Step 4 — from here on, just describe what you want in plain English.**
+Some real examples:
+- *"Fetch some Grade 2 worksheets"*
+- *"Show me what's in the Kindergarten Simple Math folder before I add any"*
+- *"Generate 3 versions of this worksheet at Grade 3, core difficulty"*
+- *"Send my approved worksheets to the shared Drive folder"*
+- *"Why did this worksheet fail validation?"*
+
+Claude Code reads this same README and the code itself, so it always
+knows the current state of the tool — no separate instructions to keep
+in sync.
+
+---
+
+## Everything you can customize
+
+A complete list, so nothing is left undocumented.
+
+### From inside the app (no file editing, takes effect immediately)
+
+| Setting | Where |
+|---|---|
+| Which AI provider is active | Setup tab (auto-detected from whichever key is in `.env`) |
+| Shared Drive folder | Setup tab — paste a link, click Save |
+| Canva connection | Setup tab — "Connect Canva" (only relevant if pursuing Canva — see its own section) |
+| Grade (Kindergarten–10), difficulty, build mode | Create screen, per generation |
+| What should vary (context/numbers/representation/etc.) | Create screen, tick any combination |
+| How many versions | Create screen |
+| Questions per worksheet | Create screen (blank = grade's default) |
+| Closing message + what it should invite the child to do | Create screen — type a topic and pick a goal, or write your own |
+| Worksheet template (visual style) | Library → upload a PDF/DOCX, tag with a grade; pick it on Create |
+| Use every source at once vs. one at a time | Create screen checkbox |
+
+### From `.env` (requires editing the file + restarting)
+
+| Variable | What it controls | Default |
+|---|---|---|
+| `GROQ_API_KEY` / `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` | Question-writing provider (first one present wins) | none |
+| `LLM_PROVIDER` | Force a specific provider instead of auto-detect | `auto` |
+| `GROQ_MODEL` / `ANTHROPIC_MODEL` / `OPENAI_MODEL` | Which model per provider | see `.env.example` |
+| `GROQ_MAX_TOKENS` | Response length budget for Groq | `5200` |
+| `OPENAI_IMAGE_MODEL` | Model for decorative/photo-real images | `gpt-image-1` |
+| `CANVA_CLIENT_ID` / `_SECRET` / `_BRAND_TEMPLATE_ID` | Canva integration identity (needs Canva Enterprise — see its section) | none |
+| `CANVA_REDIRECT_URI` | Where Canva sends the browser back after approval | `http://127.0.0.1:8020/api/canva/callback` |
+| `APP_SECRET_KEY` | Encrypts the Canva connection's tokens at rest | auto-generated if blank |
+| `GOOGLE_DRIVE_FOLDER_ID` | Fallback shared folder if nothing's saved in the Setup tab | none |
+| `GOOGLE_SERVICE_ACCOUNT_FILE` | Path to the Drive credential file | `service_account.json` in the same folder |
+| `SEO_STUDIO_DATA` | Where uploads/exports/the database live | `data/` in the same folder |
+
+### For a developer changing behaviour in code
+
+| What | Where | Default |
+|---|---|---|
+| How many sources a single bulk run can touch | `app/jobs.py` → `MAX_SOURCES_PER_RUN` | 25 |
+| Pause between sources in a bulk run (rate-limit pacing) | `app/generate.py` → `BULK_PAUSE_SECONDS` | 4 seconds |
+| The instructional design framework itself (grade skills, difficulty mix, variation dimensions) | `app/framework.py` | — |
+| What counts as "no real question" for the activity-sheet warning | `app/ingest.py` → `looks_like_questions()` | — |
+| The validation gate's checks | `app/validate.py` | — |
 
 ---
 

@@ -103,6 +103,19 @@ CREATE TABLE IF NOT EXISTS oauth_state (
     created_at     TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS drive_settings (
+    -- Single row (id always 'default'). Lets the shared Drive folder be
+    -- set from the Setup screen (paste a link, click Save) instead of
+    -- requiring an .env edit + restart -- the credential (service
+    -- account file) still has to be a real file on disk, but WHICH
+    -- folder to upload into is just a value, and values belong in the
+    -- database next to everything else the app remembers.
+    id         TEXT PRIMARY KEY DEFAULT 'default',
+    folder_id  TEXT NOT NULL,
+    folder_link TEXT,          -- the raw link as pasted, for display
+    updated_at TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS activity (
     id         TEXT PRIMARY KEY,
     action     TEXT NOT NULL,

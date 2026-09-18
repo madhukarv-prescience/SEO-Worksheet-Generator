@@ -613,7 +613,9 @@ def api_setup():
         **status,
         "canva": {**status["canva"], **canva.availability(),
                    "connection": canva.connection_status()},
-        "drive": drive.configured(),
+        "drive": {"configured": drive.configured(),
+                    "credential_ready": drive.credential_ready(),
+                    **drive.get_folder()},
         "canva_note": (
             "Canva's Autofill API requires a Canva ENTERPRISE plan — this is "
             "a hard requirement from Canva, not something this app can work "
@@ -660,6 +662,25 @@ def api_canva_disconnect():
 
 
 # ── Shared Drive folder ──────────────────────────────────────────────
+@app.post("/api/drive/folder")
+def api_set_drive_folder(link: str = Form(...)):
+    """The Setup screen's 'Save' button — paste any Drive folder link (or
+    a bare folder ID) and it takes effect immediately, no restart."""
+    try:
+        folder_id = drive.set_folder(link)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    log_activity("Shared Drive folder updated", folder_id)
+    return {"ok": True, "folder_id": folder_id,
+             "credential_ready": drive.credential_ready()}
+
+
+@app.delete("/api/drive/folder")
+def api_clear_drive_folder():
+    drive.clear_folder()
+    return {"ok": True}
+
+
 def _send_one_to_drive(worksheet_row: dict, batch: dict) -> dict:
     """Exports the worksheet if needed, then uploads it to the shared
     Drive folder under a subfolder named after its source category."""

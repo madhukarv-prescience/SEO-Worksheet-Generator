@@ -11,6 +11,22 @@ SEO_Worksheets/
 └── seo_math_worksheets/      component 2 — generation, validation, review
 ```
 
+**Running this locally, concretely:** there is no separate database
+server, no message queue, nothing to deploy beyond these two folders.
+`k5-worksheet-fetcher/run.py` is a script you run when you want more
+source PDFs — it writes plain files into
+`k5-worksheet-fetcher/data/output/<category>/` and exits; nothing about
+it stays running. `seo_math_worksheets` is the one long-running piece:
+`uvicorn app.main:app` starts a single Python process that serves the
+web page, talks to whichever AI provider is configured, and reads/writes
+one SQLite file at `seo_math_worksheets/data/studio.db`. Opening
+`http://127.0.0.1:8020` in a browser is just that process answering an
+HTTP request on your own machine — there is no cloud component unless
+you deliberately add one (see §6). Everything the app depends on —
+fetched PDFs, uploaded templates, the database, exported PDFs — lives
+under these two folders; deleting them and re-cloning the repo gets you
+back to a clean state.
+
 ---
 
 ## 1. System overview
